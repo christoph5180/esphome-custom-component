@@ -192,15 +192,14 @@ public:
     this->current_temperature = current_temperature;
   }
 
-  void set_custom_fan_mode(const char *fan_mode) {
-    const char *current = this->get_custom_fan_mode();
-    const bool same_value = (current == nullptr && fan_mode == nullptr) ||
-                           (current != nullptr && fan_mode != nullptr && std::strcmp(current, fan_mode) == 0);
+  void set_custom_fan_mode(const StringRef &fan_mode) {
+    const StringRef current = this->get_custom_fan_mode();
+    const bool same_value = current == fan_mode;
     if (same_value)
       return;
 
     bool changed = false;
-    if (fan_mode == nullptr) {
+    if (fan_mode.empty()) {
       this->clear_custom_fan_mode_();
       changed = true;
     } else {
@@ -469,33 +468,32 @@ public:
       ready_to_send_set_cmd_flag = true;
      
     }
-    if (call.get_custom_fan_mode() != nullptr) {
-      ESP_LOGI("ads", "ajskndjanjanwnjwa");
+    if (!call.get_custom_fan_mode().empty()) {
       // User requested fan mode change
-      const char *fan_mode = call.get_custom_fan_mode();
+      const StringRef fan_mode = call.get_custom_fan_mode();
 
       get_cmd_resp_t get_cmd_resp = {0};
       memcpy(get_cmd_resp.raw, m_get_cmd_resp.raw, sizeof(get_cmd_resp.raw));
 
       get_cmd_resp.data.turbo = 0x00;
       get_cmd_resp.data.mute = 0x00;
-      if (std::strcmp(fan_mode, "Turbo") == 0) {
+      if (fan_mode == "Turbo") {
         get_cmd_resp.data.fan = 0x03;
         get_cmd_resp.data.turbo = 0x01;
-      } else if (std::strcmp(fan_mode, "Mute") == 0) {
+      } else if (fan_mode == "Mute") {
         get_cmd_resp.data.fan = 0x01;
         get_cmd_resp.data.mute = 0x01;
-      } else if (std::strcmp(fan_mode, "Automatic") == 0)
+      } else if (fan_mode == "Automatic")
         get_cmd_resp.data.fan = 0x00;
-      else if (std::strcmp(fan_mode, "1") == 0)
+      else if (fan_mode == "1")
         get_cmd_resp.data.fan = 0x01;
-      else if (std::strcmp(fan_mode, "2") == 0)
+      else if (fan_mode == "2")
         get_cmd_resp.data.fan = 0x04;
-      else if (std::strcmp(fan_mode, "3") == 0)
+      else if (fan_mode == "3")
         get_cmd_resp.data.fan = 0x02;
-      else if (std::strcmp(fan_mode, "4") == 0)
+      else if (fan_mode == "4")
         get_cmd_resp.data.fan = 0x05;
-      else if (std::strcmp(fan_mode, "5") == 0)
+      else if (fan_mode == "5")
         get_cmd_resp.data.fan = 0x03;
 
       build_set_cmd(&get_cmd_resp);
@@ -620,7 +618,7 @@ public:
           else if (m_get_cmd_resp.data.fan == 0x03)
             this->set_custom_fan_mode("5");
           else
-            this->set_custom_fan_mode(nullptr);
+            this->set_custom_fan_mode("");
 
 
           if (m_get_cmd_resp.data.hswing && m_get_cmd_resp.data.vswing) this->set_swing_mode(climate::CLIMATE_SWING_BOTH);
