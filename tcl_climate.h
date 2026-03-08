@@ -384,6 +384,7 @@ public:
   }
   
   void control(const ClimateCall &call) override {
+    bool has_update = false;
     if (call.get_mode().has_value()) {
       // User requested mode change
       ClimateMode climate_mode = *call.get_mode();
@@ -393,8 +394,13 @@ public:
       memcpy(get_cmd_resp.raw, m_get_cmd_resp.raw, sizeof(get_cmd_resp.raw));
 
       if (climate_mode == climate::CLIMATE_MODE_OFF) {
+        this->set_mode(climate::CLIMATE_MODE_OFF);
         get_cmd_resp.data.power = 0x00;
       } else {
+        if (climate_mode == climate::CLIMATE_MODE_HEAT_COOL)
+          this->set_mode(climate::CLIMATE_MODE_HEAT);
+        else
+          this->set_mode(climate_mode);
         get_cmd_resp.data.power = 0x01;
         switch (climate_mode) {
           case climate::CLIMATE_MODE_COOL:
@@ -421,6 +427,8 @@ public:
 
       build_set_cmd(&get_cmd_resp);
       ready_to_send_set_cmd_flag = true;
+      this->is_changed = true;
+      has_update = true;
 
       // Publish updated state
     //  this->mode = mode;
@@ -434,9 +442,12 @@ public:
       memcpy(get_cmd_resp.raw, m_get_cmd_resp.raw, sizeof(get_cmd_resp.raw));
 
       get_cmd_resp.data.temp = uint8_t(temp) - 16;
+      this->set_target_temperature(temp);
 
       build_set_cmd(&get_cmd_resp);
       ready_to_send_set_cmd_flag = true;
+      this->is_changed = true;
+      has_update = true;
     }
     if (false) {//call.get_swing_mode().has_value()) {
       // User requested target temperature change
@@ -498,8 +509,11 @@ public:
 
       build_set_cmd(&get_cmd_resp);
       ready_to_send_set_cmd_flag = true;
-     
+      this->set_custom_fan_mode(fan_mode);
+      has_update = true;
     }
+    if (has_update)
+      this->publish_state();
   }
 
   ClimateTraits traits() override {
@@ -651,8 +665,7 @@ public:
           ESP_LOGI("TCL", "mode %02X", m_get_cmd_resp.data.mode);
           this->set_target_temperature(float(m_get_cmd_resp.data.temp + 16));
           this->set_current_temperature(curr_temp);
-          if (this->is_changed)
-            this->publish_state();
+          this->publish_state();
         }
         //publish_state(buffer);
       }
